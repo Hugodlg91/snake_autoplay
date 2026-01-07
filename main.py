@@ -64,6 +64,8 @@ class SnakeGame:
             self.snake.pop()
 
     def get_state(self):
+        # Determine speed mode based on AI status
+        is_aggressive = "Shortcut" in self.ai_status
         return {
             "snake": self.snake,
             "food": self.food,
@@ -71,13 +73,53 @@ class SnakeGame:
             "game_over": self.game_over,
             "grid_size": (GRID_WIDTH, GRID_HEIGHT),
             "ai_status": self.ai_status,
+            "speed_mode": "FAST" if is_aggressive else "NORMAL",
             "planned_path": getattr(ai, 'current_path', []) 
         }
 
 # --- HAMILTONIAN CYCLE GENERATOR ---
-class HamiltonianGenerator:
-    def __init__(self, w, h):
-        self.w = w
+# ... (Unchanged) ...
+
+# ... (AIController Unchanged) ...
+
+# --- APP SETUP ---
+
+# serve static files
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+@app.get("/")
+async def get():
+    return HTMLResponse(open("static/index.html", "r").read())
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    try:
+        while True:
+            if game.game_over:
+                await asyncio.sleep(2)
+                game.reset()
+            
+            move = ai.get_next_move()
+            game.step(move)
+            
+            state = game.get_state()
+            await websocket.send_json(state)
+            
+            # Dynamic Speed Control
+            # Normal: 15 FPS (0.066s), Fast: 30 FPS (0.033s)
+            delay = 0.033 if state["speed_mode"] == "FAST" else 0.066
+            await asyncio.sleep(delay) 
+            
+    except Exception as e:
+        print(f"Connection closed: {e}")
+
+# Global Declaration AFTER classes
+game = SnakeGame()
+ai = AIController(game)
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8000)
         self.h = h
         self.cycle_map = {} # (x,y) -> index
         self.generate()

@@ -7,70 +7,105 @@ const overlayTextEl = document.getElementById('overlay-text');
 
 let ws;
 let gameState = null;
-let lastFrameTime = 0;
+let particles = [];
+let lastScore = 0;
 
 // Configuration
-const CELL_GAP = 2; // Gap between snake segments
+const CELL_GAP = 2;
 let CELL_SIZE = 20;
+
+class Particle {
+    constructor(x, y, color) {
+        this.x = x;
+        this.y = y;
+        this.color = color;
+        const angle = Math.random() * Math.PI * 2;
+        const speed = Math.random() * 3 + 2;
+        this.vx = Math.cos(angle) * speed;
+        this.vy = Math.sin(angle) * speed;
+        this.life = 1.0;
+        this.decay = Math.random() * 0.03 + 0.02;
+    }
+
+    update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.life -= this.decay;
+        this.vx *= 0.95; // Friction
+        this.vy *= 0.95;
+    }
+
+    draw(ctx) {
+        ctx.save();
+        ctx.globalAlpha = this.life;
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+}
 
 function connect() {
     ws = new WebSocket(`ws://${location.host}/ws`);
 
     ws.onmessage = (event) => {
-        gameState = JSON.parse(event.data);
+        const newState = JSON.parse(event.data);
+
+        // Detect Score Increase
+        if (gameState && newState.score > gameState.score) {
+            spawnParticles(newState.food[0], newState.food[1], '#ff0055');
+        }
+
+        gameState = newState;
         updateUI();
     };
 
     ws.onclose = () => {
         statusEl.textContent = "DISCONNECTED";
         statusEl.style.color = "red";
-        setTimeout(connect, 1000); // Reconnect
+        setTimeout(connect, 1000);
     };
+}
+
+function spawnParticles(gridX, gridY, color) {
+    const px = gridX * CELL_SIZE + CELL_SIZE / 2;
+    const py = gridY * CELL_SIZE + CELL_SIZE / 2;
+    for (let i = 0; i < 15; i++) {
+        particles.push(new Particle(px, py, color));
+    }
 }
 
 function resizeCanvas() {
     if (!gameState) return;
-
-    // Maintain aspect ratio based on grid
     const aspect = gameState.grid_size[0] / gameState.grid_size[1];
     const maxWidth = window.innerWidth - 40;
-    const maxHeight = window.innerHeight - 200; // Leave space for header/footer
-
+    const maxHeight = window.innerHeight - 200;
     let width = maxWidth;
     let height = width / aspect;
-
     if (height > maxHeight) {
         height = maxHeight;
         width = height * aspect;
     }
-
     canvas.width = width;
     canvas.height = height;
-
-    // Update cell size based on canvas width/height
     CELL_SIZE = width / gameState.grid_size[0];
 }
 
 function updateUI() {
     if (!gameState) return;
 
-    // Resize if first frame or grid changed
     if (canvas.width === 0 || Math.abs(canvas.width / gameState.grid_size[0] - CELL_SIZE) > 0.1) {
         resizeCanvas();
     }
 
     scoreEl.textContent = gameState.score;
-    // statusEl.textContent = gameState.ai_status; // Too fast changes?
 
-    // Smoother text update
     if (gameState.ai_status !== statusEl.textContent) {
         statusEl.textContent = gameState.ai_status;
-
-        // Color coding
-        if (gameState.ai_status === "Targeting Food") statusEl.style.color = "#00ff88";
-        else if (gameState.ai_status === "Survival Mode") statusEl.style.color = "#ffaa00";
-        else if (gameState.ai_status === "Giving Up") statusEl.style.color = "#ff0055";
-        else statusEl.style.color = "#00ccff";
+        if (gameState.ai_status.includes("Shortcut")) statusEl.style.color = "#00ff88"; // Green
+        else if (gameState.ai_status.includes("Cycle")) statusEl.style.color = "#00ccff"; // Blue
+        else statusEl.style.color = "#ff0055"; // Red/Warn
     }
 
     if (gameState.game_over) {
@@ -83,13 +118,13 @@ function updateUI() {
 
 function draw() {
     requestAnimationFrame(draw);
-
     if (!gameState) return;
 
-    ctx.fillStyle = '#050505'; // Clear with bg color
+    // Background
+    ctx.fillStyle = '#050505';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Draw Grid (Optional, subtle)
+    // Grid
     ctx.strokeStyle = '#1a1a1a';
     ctx.lineWidth = 1;
     for (let x = 0; x <= gameState.grid_size[0]; x++) {
@@ -105,67 +140,66 @@ function draw() {
         ctx.stroke();
     }
 
-    // Draw Food
-    const fx = gameState.food[0] * CELL_SIZE;
-    const fy = gameState.food[1] * CELL_SIZE;
-    ctx.fillStyle = '#ff0055';
-    ctx.shadowBlur = 15;
-    ctx.shadowColor = '#ff0055';
-
-    // Pulse effect
-    const time = Date.now() / 200;
-    const pulse = Math.sin(time) * 2;
-
-    ctx.beginPath();
-    ctx.arc(fx + CELL_SIZE / 2, fy + CELL_SIZE / 2, (CELL_SIZE / 2 - 2) + pulse, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.shadowBlur = 0;
-
-    // Draw Planned Path (AI Prediction)
+    // Planned Path
     if (gameState.planned_path && gameState.planned_path.length > 0) {
-        ctx.strokeStyle = 'rgba(0, 255, 136, 0.2)'; // Faint AI color
+        ctx.strokeStyle = 'rgba(0, 255, 136, 0.15)';
         ctx.lineWidth = 2;
-        ctx.setLineDash([5, 5]); // Dashed line to indicate "future"
-
+        ctx.setLineDash([5, 5]);
         ctx.beginPath();
-        // Start from head
         const headX = gameState.snake[0][0] * CELL_SIZE + CELL_SIZE / 2;
         const headY = gameState.snake[0][1] * CELL_SIZE + CELL_SIZE / 2;
         ctx.moveTo(headX, headY);
-
         gameState.planned_path.forEach(pos => {
             const px = pos[0] * CELL_SIZE + CELL_SIZE / 2;
             const py = pos[1] * CELL_SIZE + CELL_SIZE / 2;
             ctx.lineTo(px, py);
         });
-
         ctx.stroke();
-        ctx.setLineDash([]); // Reset
+        ctx.setLineDash([]);
     }
 
-    // Draw Snake
+    // Food
+    const fx = gameState.food[0] * CELL_SIZE;
+    const fy = gameState.food[1] * CELL_SIZE;
+    ctx.fillStyle = '#ff0055';
+    ctx.shadowBlur = 20;
+    ctx.shadowColor = '#ff0055';
+    const pulse = Math.sin(Date.now() / 150) * 3;
+    ctx.beginPath();
+    ctx.arc(fx + CELL_SIZE / 2, fy + CELL_SIZE / 2, (CELL_SIZE / 2 - 2) + pulse, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Snake with Pulse
+    const snakePulse = Math.sin(Date.now() / 200) * 0.2 + 0.8; // 0.6 to 1.0 opacity
     gameState.snake.forEach((segment, index) => {
         const x = segment[0] * CELL_SIZE;
         const y = segment[1] * CELL_SIZE;
 
         ctx.fillStyle = index === 0 ? '#ffffff' : '#00ff88';
 
-        // Head glow
         if (index === 0) {
-            ctx.shadowBlur = 10;
+            ctx.shadowBlur = 15;
             ctx.shadowColor = '#ffffff';
         } else {
             ctx.shadowBlur = 0;
-            // Gradient or darkening for tail?
-            ctx.globalAlpha = 1 - (index / (gameState.snake.length + 5));
+            // Pulsing opacity for body
+            ctx.globalAlpha = snakePulse - (index / (gameState.snake.length + 10));
+            if (ctx.globalAlpha < 0.2) ctx.globalAlpha = 0.2;
         }
 
         ctx.fillRect(x + CELL_GAP, y + CELL_GAP, CELL_SIZE - CELL_GAP * 2, CELL_SIZE - CELL_GAP * 2);
         ctx.globalAlpha = 1;
     });
+
+    // Particles
+    particles.forEach((p, i) => {
+        p.update();
+        p.draw(ctx);
+        if (p.life <= 0) particles.splice(i, 1);
+    });
 }
 
-// Init
 window.addEventListener('resize', resizeCanvas);
 connect();
 requestAnimationFrame(draw);
