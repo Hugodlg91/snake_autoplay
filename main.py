@@ -293,6 +293,10 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 async def get():
     return HTMLResponse(open("static/index.html", "r").read())
 
+@app.get("/index.html")
+async def get_index():
+    return HTMLResponse(open("static/index.html", "r").read())
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
