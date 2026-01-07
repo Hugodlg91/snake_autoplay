@@ -57,6 +57,22 @@ function connect() {
             spawnParticles(newState.food[0], newState.food[1], '#ff0055');
         }
 
+        // Handle TikTok Effects
+        if (newState.tiktok_effect === "GOLD_RAIN") {
+            const cx = Math.floor(newState.grid_size[0] / 2);
+            const cy = Math.floor(newState.grid_size[1] / 2);
+            spawnParticles(cx, cy, '#FFD700', 50); // Massive gold explosion
+            // Optional: Floating text could be added here
+        }
+
+        // Update Hype Visuals
+        const hype = newState.hype || 0;
+        if (hype > 10) {
+            document.body.style.boxShadow = `inset 0 0 ${Math.min(hype, 100)}px rgba(255, 0, 85, 0.2)`;
+        } else {
+            document.body.style.boxShadow = 'none';
+        }
+
         gameState = newState;
         updateUI();
     };
@@ -68,10 +84,10 @@ function connect() {
     };
 }
 
-function spawnParticles(gridX, gridY, color) {
+function spawnParticles(gridX, gridY, color, count = 15) {
     const px = gridX * CELL_SIZE + CELL_SIZE / 2;
     const py = gridY * CELL_SIZE + CELL_SIZE / 2;
-    for (let i = 0; i < 15; i++) {
+    for (let i = 0; i < count; i++) {
         particles.push(new Particle(px, py, color));
     }
 }

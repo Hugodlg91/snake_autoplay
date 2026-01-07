@@ -59,6 +59,56 @@ class GameLogger:
         
         avg = sum(self.recent_scores) / len(self.recent_scores) if self.recent_scores else 0
         print(f"💀 Game Over | Score: {score} | Avg (10): {avg:.1f} | Cause: {cause}")
+       # --- TIKTOK LIVE INTEGRATION ---
+try:
+    from TikTokLive import TikTokLiveClient
+    from TikTokLive.types.events import LikeEvent, CommentEvent, GiftEvent
+    TIKTOK_AVAILABLE = True
+except ImportError:
+    TIKTOK_AVAILABLE = False
+    print("TikTokLive library not found. Running without live integration.")
+
+class TikTokManager:
+    def __init__(self, game: SnakeGame, unique_id: str):
+        self.game = game
+        self.client = None
+        self.unique_id = unique_id
+        
+        if TIKTOK_AVAILABLE:
+            try:
+                self.client = TikTokLiveClient(unique_id=unique_id)
+                self.setup_events()
+            except Exception as e:
+                print(f"Failed to initialize TikTok Client: {e}")
+
+    def setup_events(self):
+        @self.client.on("like")
+        async def on_like(event: LikeEvent):
+            self.game.hype_level += event.count
+            print(f"❤️ Hype Up! Total: {self.game.hype_level}")
+            
+        @self.client.on("comment")
+        async def on_comment(event: CommentEvent):
+            if "boost" in event.comment.lower():
+                self.game.force_shortcut = True
+                print("🚀 CHAT BOOST ACTIVATED!")
+                # Reset boost after 5 seconds? Handled in game loop maybe?
+                # Simplified: just keep it high level flag, let game logic handle decay if needed.
+                # For now, simplistic toggle.
+                
+        @self.client.on("gift")
+        async def on_gift(event: GiftEvent):
+            print(f"🎁 GIFT! {event.gift.info.name}")
+            self.game.current_effect = "GOLD_RAIN"
+            self.game.hype_level += 50
+
+    async def start(self):
+        if self.client:
+            try:
+                # Run in a non-blocking way if possible, or just start background task
+                await self.client.start()
+            except Exception as e:
+                print(f"TikTok Connection Error: {e}")
 
 # --- HAMILTONIAN CYCLE GENERATOR ---
 class HamiltonianGenerator:
@@ -105,6 +155,12 @@ class SnakeGame:
         self.game_won = False
         self.ai_status = "Initializing..."
         self.death_cause = ""
+        
+        # TikTok State
+        self.hype_level = 0
+        self.current_effect = None
+        self.force_shortcut = False
+        self.boost_timer = 0
 
     def _spawn_food(self) -> Tuple[int, int]:
         # Safety check: if grid is full, return None (Victory condition handled in step)
@@ -172,6 +228,16 @@ class SnakeGame:
                  self.logger.log_game_over(self.score, "PERFECT GAME")
         else:
             self.snake.pop()
+            
+        # Hype Decay / Boost Decay
+        if self.force_shortcut:
+            self.boost_timer += 1
+            if self.boost_timer > 150: # ~5 seconds at 30FPS
+                self.force_shortcut = False
+                self.boost_timer = 0
+                
+        if self.hype_level > 0 and random.random() < 0.05:
+            self.hype_level -= 1
 
     def force_game_over(self, cause):
         self.game_over = True
@@ -180,7 +246,7 @@ class SnakeGame:
 
     def get_state(self):
         is_aggressive = "Shortcut" in self.ai_status
-        return {
+        state = {
             "snake": self.snake,
             "food": self.food,
             "score": self.score,
@@ -189,8 +255,13 @@ class SnakeGame:
             "grid_size": (GRID_WIDTH, GRID_HEIGHT),
             "ai_status": self.ai_status,
             "speed_mode": "FAST" if is_aggressive else "NORMAL",
-            "planned_path": getattr(ai, 'current_path', []) 
+            "planned_path": getattr(ai, 'current_path', []),
+            "tiktok_effect": self.current_effect,
+            "hype": self.hype_level
         }
+        # Consume effect
+        self.current_effect = None
+        return state
 
 # --- AI CONTROLLER ---
 class AIController:
@@ -261,12 +332,25 @@ class AIController:
             if is_path_clear(pos_idx, tail_idx):
                 # Move is safe!
                 d_to_food = dist_cycle(pos_idx, food_idx)
+                
+                # Check 2.1: Is BOOST active?
+                # If Boost is active, we take ANY shortcut that is safe, even if it's not the absolute best?
+                # Or just enable a smaller margin logic (which Raycast already supersedes)?
+                # Actually Raycast logic handles safety absolutely.
+                # Boost logic: If 'd_to_food' is strictly less than 'min_dist', we normally take it.
+                # If boost is active, we might prioritize aggression.
+                # Since min_dist logic IS aggressive, we don't need to change much.
+                # BUT we can update status to show Boost.
+                
                 if d_to_food < min_dist:
                     min_dist = d_to_food
                     best_shortcut = move
         
         if best_shortcut:
-            self.game.ai_status = "Taking Shortcut!"
+            if self.game.force_shortcut:
+                 self.game.ai_status = "Taking Shortcut! (BOOST)"
+            else:
+                 self.game.ai_status = "Taking Shortcut!"
             return best_shortcut
 
         # Fallback: STRICT Hamiltonian Cycle
@@ -285,9 +369,15 @@ class AIController:
 # Global Declaration AFTER classes
 game = SnakeGame()
 ai = AIController(game)
+tiktok = TikTokManager(game, unique_id="@vladimirwrld1")
 
 # serve static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+@app.on_event("startup")
+async def startup_event():
+    # Start TikTok task in background
+    asyncio.create_task(tiktok.start())
 
 @app.get("/")
 async def get():
