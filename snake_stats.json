@@ -1,7 +1,10 @@
 {
     "high_score": 171,
-    "total_games": 1,
+    "total_games": 3,
     "recent_scores": [
-        171
+        171,
+        139,
+        130,
+        598
     ]
 }
