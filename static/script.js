@@ -110,7 +110,19 @@ function updateUI() {
 
     if (gameState.game_over) {
         overlayTextEl.textContent = "GAME OVER";
+        overlayTextEl.style.color = "#ff0055";
+        overlayTextEl.style.textShadow = "0 0 20px #ff0055";
         overlayEl.classList.add("visible");
+    } else if (gameState.game_won) {
+        overlayTextEl.textContent = "PERFECT GAME";
+        overlayTextEl.style.color = "#ffd700"; // Gold
+        overlayTextEl.style.textShadow = "0 0 30px #ffd700, 0 0 60px #ffaa00";
+        overlayEl.classList.add("visible");
+
+        // Victory Particles
+        if (Math.random() < 0.1) {
+            spawnParticles(Math.floor(gameState.grid_size[0] / 2), Math.floor(gameState.grid_size[1] / 2), '#ffd700');
+        }
     } else {
         overlayEl.classList.remove("visible");
     }
@@ -158,17 +170,19 @@ function draw() {
         ctx.setLineDash([]);
     }
 
-    // Food
-    const fx = gameState.food[0] * CELL_SIZE;
-    const fy = gameState.food[1] * CELL_SIZE;
-    ctx.fillStyle = '#ff0055';
-    ctx.shadowBlur = 20;
-    ctx.shadowColor = '#ff0055';
-    const pulse = Math.sin(Date.now() / 150) * 3;
-    ctx.beginPath();
-    ctx.arc(fx + CELL_SIZE / 2, fy + CELL_SIZE / 2, (CELL_SIZE / 2 - 2) + pulse, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.shadowBlur = 0;
+    // Food (only if exists)
+    if (gameState.food) {
+        const fx = gameState.food[0] * CELL_SIZE;
+        const fy = gameState.food[1] * CELL_SIZE;
+        ctx.fillStyle = '#ff0055';
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = '#ff0055';
+        const pulse = Math.sin(Date.now() / 150) * 3;
+        ctx.beginPath();
+        ctx.arc(fx + CELL_SIZE / 2, fy + CELL_SIZE / 2, (CELL_SIZE / 2 - 2) + pulse, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+    }
 
     // Snake with Pulse
     const snakePulse = Math.sin(Date.now() / 200) * 0.2 + 0.8; // 0.6 to 1.0 opacity

@@ -102,17 +102,36 @@ class SnakeGame:
         self.food: Tuple[int, int] = self._spawn_food()
         self.score = 0
         self.game_over = False
+        self.game_won = False
         self.ai_status = "Initializing..."
         self.death_cause = ""
 
     def _spawn_food(self) -> Tuple[int, int]:
-        while True:
+        # Safety check: if grid is full, return None (Victory condition handled in step)
+        if len(self.snake) >= GRID_WIDTH * GRID_HEIGHT:
+            return None
+            
+        # Try random positions first (fast)
+        for _ in range(50):
             pos = (random.randint(0, GRID_WIDTH - 1), random.randint(0, GRID_HEIGHT - 1))
             if pos not in self.snake:
                 return pos
+        
+        # Fallback: Scan grid for empty spot
+        available = []
+        snake_set = set(self.snake)
+        for x in range(GRID_WIDTH):
+            for y in range(GRID_HEIGHT):
+                if (x, y) not in snake_set:
+                    available.append((x, y))
+        
+        if not available:
+            return None # Should be caught by length check, but safe fallback
+            
+        return random.choice(available)
 
     def step(self, next_move: Direction):
-        if self.game_over:
+        if self.game_over or self.game_won:
             return
 
         head_x, head_y = self.snake[0]
@@ -136,7 +155,21 @@ class SnakeGame:
         
         if new_head == self.food:
             self.score += 1
+            
+            # CHECK VICTORY
+            if len(self.snake) >= GRID_WIDTH * GRID_HEIGHT:
+                self.game_won = True
+                self.food = None # No more food
+                self.logger.log_game_over(self.score, "PERFECT GAME")
+                return
+
             self.food = self._spawn_food()
+            
+            # Double check if food grew into full grid (unlikely 1 step)
+            if self.food is None and not self.game_won:
+                 # Grid full but maybe triggered atypically?
+                 self.game_won = True
+                 self.logger.log_game_over(self.score, "PERFECT GAME")
         else:
             self.snake.pop()
 
@@ -152,6 +185,7 @@ class SnakeGame:
             "food": self.food,
             "score": self.score,
             "game_over": self.game_over,
+            "game_won": self.game_won,
             "grid_size": (GRID_WIDTH, GRID_HEIGHT),
             "ai_status": self.ai_status,
             "speed_mode": "FAST" if is_aggressive else "NORMAL",
