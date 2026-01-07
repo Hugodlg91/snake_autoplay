@@ -148,13 +148,15 @@ function draw() {
     requestAnimationFrame(draw);
     if (!gameState) return;
 
-    // Background
-    ctx.fillStyle = '#050505';
+    // A. TRAIL EFFECT (Background with alpha)
+    ctx.fillStyle = 'rgba(5, 5, 12, 0.25)'; // Dark Blue-ish Black with transparency
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Grid
-    ctx.strokeStyle = '#1a1a1a';
+    // Grid (Subtle)
+    ctx.strokeStyle = 'rgba(0, 255, 255, 0.03)';
     ctx.lineWidth = 1;
+    // Optimize grid drawing? Maybe static canvas? For now keep dynamic for trail effect interaction.
+    // Actually grid doesn't need to trail, but redrawing it excessively is fine.
     for (let x = 0; x <= gameState.grid_size[0]; x++) {
         ctx.beginPath();
         ctx.moveTo(x * CELL_SIZE, 0);
@@ -168,11 +170,10 @@ function draw() {
         ctx.stroke();
     }
 
-    // Planned Path
+    // B. PLANNED PATH (Hacker Style)
     if (gameState.planned_path && gameState.planned_path.length > 0) {
-        ctx.strokeStyle = 'rgba(0, 255, 136, 0.15)';
-        ctx.lineWidth = 2;
-        ctx.setLineDash([5, 5]);
+        ctx.strokeStyle = 'rgba(0, 255, 0, 0.1)';
+        ctx.lineWidth = 1;
         ctx.beginPath();
         const headX = gameState.snake[0][0] * CELL_SIZE + CELL_SIZE / 2;
         const headY = gameState.snake[0][1] * CELL_SIZE + CELL_SIZE / 2;
@@ -183,46 +184,100 @@ function draw() {
             ctx.lineTo(px, py);
         });
         ctx.stroke();
-        ctx.setLineDash([]);
     }
 
-    // Food (only if exists)
+    // C. FOOD (Pulsing Orbs)
     if (gameState.food) {
-        const fx = gameState.food[0] * CELL_SIZE;
-        const fy = gameState.food[1] * CELL_SIZE;
-        ctx.fillStyle = '#ff0055';
+        const fx = gameState.food[0] * CELL_SIZE + CELL_SIZE / 2;
+        const fy = gameState.food[1] * CELL_SIZE + CELL_SIZE / 2;
+
         ctx.shadowBlur = 20;
-        ctx.shadowColor = '#ff0055';
-        const pulse = Math.sin(Date.now() / 150) * 3;
+        ctx.shadowColor = '#FF00FF'; // Magenta Glow
+
+        const time = Date.now() / 200;
+        const pulse = Math.sin(time) * 3;
+        const size = (CELL_SIZE / 2 - 4) + pulse;
+
+        // Inner Orb
+        ctx.fillStyle = '#FF00FF';
         ctx.beginPath();
-        ctx.arc(fx + CELL_SIZE / 2, fy + CELL_SIZE / 2, (CELL_SIZE / 2 - 2) + pulse, 0, Math.PI * 2);
+        ctx.arc(fx, fy, Math.max(0, size), 0, Math.PI * 2);
         ctx.fill();
+
+        // Shockwave Ring
+        const waveSize = (Date.now() % 1000) / 1000 * CELL_SIZE * 1.5;
+        const waveAlpha = 1 - ((Date.now() % 1000) / 1000);
+        ctx.strokeStyle = `rgba(255, 0, 255, ${waveAlpha})`;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(fx, fy, waveSize, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.shadowBlur = 0; // Reset
+    }
+
+    // D. SNAKE (Neon Gradient)
+    if (gameState.snake.length > 0) {
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = 'cyan';
+
+        // Gradient for body
+        // Creating a gradient based on the snake's bounding box might be tricky for a winding snake.
+        // Instead, interpolate color per segment.
+
+        gameState.snake.forEach((pos, i) => {
+            const x = pos[0] * CELL_SIZE;
+            const y = pos[1] * CELL_SIZE;
+
+            // Color Interpolation: Cyan (Head) -> Purple (Tail)
+            const progress = i / gameState.snake.length;
+            // Simple interpolation logic could be optimized, but let's use HSL
+            // Head: 180 (Cyan), Tail: 260 (Purple)
+            const hue = 180 + (progress * 80);
+            ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
+
+            // Draw Rounded Rect
+            const r = CELL_SIZE / 4;
+            ctx.beginPath();
+            // Check if roundRect is supported, fallback to fillRect if not
+            if (typeof ctx.roundRect === 'function') {
+                ctx.roundRect(x + 1, y + 1, CELL_SIZE - 2, CELL_SIZE - 2, r);
+            } else {
+                ctx.fillRect(x + 1, y + 1, CELL_SIZE - 2, CELL_SIZE - 2);
+            }
+            ctx.fill();
+
+            // Head Eyes
+            if (i === 0) {
+                ctx.fillStyle = '#000'; // Black eyes
+                // Basic direction check (compare with 2nd segment)
+                let dx = 0, dy = 0;
+                if (gameState.snake.length > 1) {
+                    dx = gameState.snake[0][0] - gameState.snake[1][0];
+                    dy = gameState.snake[0][1] - gameState.snake[1][1];
+                }
+
+                const eyeOffset = CELL_SIZE / 4;
+                const eyeSize = 3;
+
+                /* Logic for eyes placement based on dx, dy */
+                // Simplified: Just draw center pupil for now to look robotic
+                ctx.beginPath();
+                ctx.arc(x + CELL_SIZE / 2 + dx * 4, y + CELL_SIZE / 2 + dy * 4, eyeSize, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        });
+
         ctx.shadowBlur = 0;
     }
 
-    // Snake with Pulse
-    const snakePulse = Math.sin(Date.now() / 200) * 0.2 + 0.8; // 0.6 to 1.0 opacity
-    gameState.snake.forEach((segment, index) => {
-        const x = segment[0] * CELL_SIZE;
-        const y = segment[1] * CELL_SIZE;
+    // F. SCANLINES (Overlay)
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+    for (let i = 0; i < canvas.height; i += 4) {
+        ctx.fillRect(0, i, canvas.width, 1);
+    }
 
-        ctx.fillStyle = index === 0 ? '#ffffff' : '#00ff88';
-
-        if (index === 0) {
-            ctx.shadowBlur = 15;
-            ctx.shadowColor = '#ffffff';
-        } else {
-            ctx.shadowBlur = 0;
-            // Pulsing opacity for body
-            ctx.globalAlpha = snakePulse - (index / (gameState.snake.length + 10));
-            if (ctx.globalAlpha < 0.2) ctx.globalAlpha = 0.2;
-        }
-
-        ctx.fillRect(x + CELL_GAP, y + CELL_GAP, CELL_SIZE - CELL_GAP * 2, CELL_SIZE - CELL_GAP * 2);
-        ctx.globalAlpha = 1;
-    });
-
-    // Particles
+    // E. PARTICLES
     particles.forEach((p, i) => {
         p.update();
         p.draw(ctx);
