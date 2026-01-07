@@ -207,53 +207,59 @@ class AIController:
         tail = snake[-1] 
         food = self.game.food
         
-        self.current_path = []
-
-        head_idx = self.cycle.get(head)
-        tail_idx = self.cycle.get(tail)
-        food_idx = self.cycle.get(food)
-        
         # Determine valid physical moves
         valid_moves = []
+        snake_set = set(snake[:-1]) # Body barring tail
+        
         for d in Direction:
             nx, ny = head[0] + d.value[0], head[1] + d.value[1]
             if 0 <= nx < GRID_WIDTH and 0 <= ny < GRID_HEIGHT:
                 n_pos = (nx, ny)
-                if n_pos not in snake[:-1]: 
+                if n_pos not in snake_set: 
                     valid_moves.append((d, n_pos))
         
         if not valid_moves:
             self.game.force_game_over("Trapped (No Moves)")
             return Direction.UP
 
+        head_idx = self.cycle.get(head)
+        tail_idx = self.cycle.get(tail)
+        food_idx = self.cycle.get(food)
+        
         def dist_cycle(a_idx, b_idx):
             if b_idx >= a_idx: return b_idx - a_idx
             return b_idx - a_idx + self.cycle_len
+            
+        # RAYCAST HELPER: Check if cycle path from start to end is completely clear
+        def is_path_clear(start_idx, end_idx):
+            if start_idx == end_idx: return True
+            
+            # Walk the cycle delta
+            curr = (start_idx + 1) % self.cycle_len
+            while curr != end_idx:
+                curr_pos = self.hamilton.path[curr]
+                if curr_pos in snake_set:
+                    return False
+                curr = (curr + 1) % self.cycle_len
+            return True
 
         # Shortcut Logic
         best_shortcut = None
         min_dist = dist_cycle(head_idx, food_idx)
         
-        # Only attempt shortcuts if we have decent length (early game is safe anyway)
-        # Actually early game shortcuts are safest.
-        
         for move, pos in valid_moves:
             pos_idx = self.cycle.get(pos)
-            if pos_idx is None: continue # Should not happen
+            if pos_idx is None: continue 
             
-            # Check 1: Does this move follow the cycle EXACTLY?
-            # If so, it's the "Safe Default". Not a shortcut.
+            # Check 1: Is it the default cycle move? Skip (handled by fallback)
             if pos_idx == (head_idx + 1) % self.cycle_len:
                 continue 
 
-            # It's a jump. Is it safe?
-            # Safe means: NewDistanceToTail > SnakeLength + Margin
-            d_head_to_tail = dist_cycle(pos_idx, tail_idx)
-            future_len = len(snake) + 1 # Assume growth for safety margin
-            margin = 3 # Extra buffer
-            
-            if d_head_to_tail > future_len + margin:
-                # Safe jump. Does it help?
+            # Check 2: Cycle Raycast
+            # Simulate walking from pos -> tail along the cycle.
+            # If ANY block is found, this shortcut is unsafe.
+            if is_path_clear(pos_idx, tail_idx):
+                # Move is safe!
                 d_to_food = dist_cycle(pos_idx, food_idx)
                 if d_to_food < min_dist:
                     min_dist = d_to_food
@@ -264,7 +270,6 @@ class AIController:
             return best_shortcut
 
         # Fallback: STRICT Hamiltonian Cycle
-        # Find the move that goes to (head_idx + 1)
         target_idx = (head_idx + 1) % self.cycle_len
         
         for move, pos in valid_moves:
@@ -272,9 +277,6 @@ class AIController:
                 self.game.ai_status = "Mindmaster Cycle"
                 return move
                 
-        # This implies the cycle path is blocked physically (e.g. by our own body in a weird state)
-        # This should theoretically not happen if we always strictly respected safety.
-        # But if it does, move anywhere to survive.
         self.game.ai_status = "Emergency Move"
         return valid_moves[0][0]
 
