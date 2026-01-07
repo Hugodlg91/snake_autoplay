@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Autonomous Snake AI</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>AI SNAKE BOT</h1>
+            <div class="status-bar">
+                <div class="status-item">
+                    <span class="label">STATUS</span>
+                    <span id="ai-status" class="value">INITIALIZING...</span>
+                </div>
+                <div class="status-item">
+                    <span class="label">SCORE</span>
+                    <span id="score" class="value">0</span>
+                </div>
+            </div>
+        </header>
+        
+        <main>
+            <canvas id="gameCanvas"></canvas>
+            <div class="overlay" id="overlay">
+                <h2 id="overlay-text">READY</h2>
+            </div>
+        </main>
+
+        <footer>
+            <div class="msg">LIVE ON TIKTOK</div>
+        </footer>
+    </div>
+    <script src="/static/script.js"></script>
+</body>
+</html>
