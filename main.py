@@ -387,6 +387,20 @@ async def get():
 async def get_index():
     return HTMLResponse(open("static/index.html", "r").read())
 
+@app.get("/debug/trigger/{event_type}")
+async def debug_trigger(event_type: str):
+    if event_type == "gift":
+        game.current_effect = "GOLD_RAIN"
+        game.hype_level += 50
+        print("DEBUG: Triggered GOLD_RAIN")
+    elif event_type == "boost":
+        game.force_shortcut = True
+        print("DEBUG: Triggered BOOST")
+    elif event_type == "like":
+        game.hype_level += 10
+        print("DEBUG: Triggered HYPE")
+    return {"status": "triggered", "event": event_type}
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
