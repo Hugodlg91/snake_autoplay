@@ -55,6 +55,7 @@ function connect() {
         // Detect Score Increase
         if (gameState && newState.score > gameState.score) {
             spawnParticles(newState.food[0], newState.food[1], '#ff0055');
+            triggerScreenShake(7); // Shake for 7 frames
         }
 
         // Handle TikTok Effects
@@ -115,174 +116,201 @@ function updateUI() {
         resizeCanvas();
     }
 
-    scoreEl.textContent = gameState.score;
+    scoreEl.textContent = `SCORE: ${gameState.score}`;
+    statusEl.textContent = `SYSTEM: ${gameState.ai_status}`;
+    // Use HTML for styling parts of the status if needed, or keeping it text.
 
-    if (gameState.ai_status !== statusEl.textContent) {
-        statusEl.textContent = gameState.ai_status;
-        if (gameState.ai_status.includes("Shortcut")) statusEl.style.color = "#00ff88"; // Green
-        else if (gameState.ai_status.includes("Cycle")) statusEl.style.color = "#00ccff"; // Blue
-        else statusEl.style.color = "#ff0055"; // Red/Warn
+    // Hype Styling
+    const hype = gameState.hype || 0;
+    if (hype > 0) {
+        document.body.style.boxShadow = `inset 0 0 ${Math.min(hype * 2, 100)}px rgba(255, 0, 85, 0.4)`;
+    } else {
+        document.body.style.boxShadow = 'none';
     }
 
     if (gameState.game_over) {
-        overlayTextEl.textContent = "GAME OVER";
+        overlayTextEl.textContent = "SYSTEM FAILURE";
         overlayTextEl.style.color = "#ff0055";
         overlayTextEl.style.textShadow = "0 0 20px #ff0055";
         overlayEl.classList.add("visible");
     } else if (gameState.game_won) {
-        overlayTextEl.textContent = "PERFECT GAME";
-        overlayTextEl.style.color = "#ffd700"; // Gold
-        overlayTextEl.style.textShadow = "0 0 30px #ffd700, 0 0 60px #ffaa00";
+        overlayTextEl.textContent = "SYSTEM TRANSCENDED";
+        overlayTextEl.style.color = "#ffd700";
+        overlayTextEl.style.textShadow = "0 0 30px #ffd700";
         overlayEl.classList.add("visible");
-
-        // Victory Particles
-        if (Math.random() < 0.1) {
-            spawnParticles(Math.floor(gameState.grid_size[0] / 2), Math.floor(gameState.grid_size[1] / 2), '#ffd700');
-        }
     } else {
         overlayEl.classList.remove("visible");
     }
 }
 
+// Helper function to draw and update particles
+function drawParticles(ctx) {
+    for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.update();
+        p.draw(ctx);
+        if (p.life <= 0) {
+            particles.splice(i, 1);
+        }
+    }
+}
+
+// --- RENDU GRAPHIQUE ---
 function draw() {
     requestAnimationFrame(draw);
     if (!gameState) return;
 
-    // A. TRAIL EFFECT (Background with alpha)
-    ctx.fillStyle = 'rgba(5, 5, 12, 0.25)'; // Dark Blue-ish Black with transparency
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // 1. Screen Shake Transform
+    ctx.save();
+    if (shakeRemaining > 0) {
+        const dx = (Math.random() - 0.5) * 10;
+        const dy = (Math.random() - 0.5) * 10;
+        ctx.translate(dx, dy);
+        shakeRemaining--;
+    }
 
-    // Grid (Subtle)
-    ctx.strokeStyle = 'rgba(0, 255, 255, 0.03)';
+    // A. CLEAR CANVAS (No Trail, Max Visibility)
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // 3. Grid (Very subtle scanline style grid)
+    ctx.strokeStyle = 'rgba(0, 255, 255, 0.1)'; // Brighter grid
     ctx.lineWidth = 1;
-    // Optimize grid drawing? Maybe static canvas? For now keep dynamic for trail effect interaction.
-    // Actually grid doesn't need to trail, but redrawing it excessively is fine.
+    ctx.beginPath();
     for (let x = 0; x <= gameState.grid_size[0]; x++) {
-        ctx.beginPath();
         ctx.moveTo(x * CELL_SIZE, 0);
         ctx.lineTo(x * CELL_SIZE, canvas.height);
-        ctx.stroke();
     }
     for (let y = 0; y <= gameState.grid_size[1]; y++) {
-        ctx.beginPath();
         ctx.moveTo(0, y * CELL_SIZE);
         ctx.lineTo(canvas.width, y * CELL_SIZE);
-        ctx.stroke();
     }
+    ctx.stroke();
 
-    // B. PLANNED PATH (Hacker Style)
+    // 4. Planned Path
     if (gameState.planned_path && gameState.planned_path.length > 0) {
-        ctx.strokeStyle = 'rgba(0, 255, 0, 0.1)';
+        ctx.strokeStyle = 'rgba(0, 255, 200, 0.1)';
         ctx.lineWidth = 1;
         ctx.beginPath();
-        const headX = gameState.snake[0][0] * CELL_SIZE + CELL_SIZE / 2;
-        const headY = gameState.snake[0][1] * CELL_SIZE + CELL_SIZE / 2;
-        ctx.moveTo(headX, headY);
+        // Start from head
+        const head = gameState.snake[0];
+        ctx.moveTo(head[0] * CELL_SIZE + CELL_SIZE / 2, head[1] * CELL_SIZE + CELL_SIZE / 2);
         gameState.planned_path.forEach(pos => {
-            const px = pos[0] * CELL_SIZE + CELL_SIZE / 2;
-            const py = pos[1] * CELL_SIZE + CELL_SIZE / 2;
-            ctx.lineTo(px, py);
+            ctx.lineTo(pos[0] * CELL_SIZE + CELL_SIZE / 2, pos[1] * CELL_SIZE + CELL_SIZE / 2);
         });
         ctx.stroke();
     }
 
-    // C. FOOD (Pulsing Orbs)
+    // 5. Food (Neon Orb)
     if (gameState.food) {
         const fx = gameState.food[0] * CELL_SIZE + CELL_SIZE / 2;
         const fy = gameState.food[1] * CELL_SIZE + CELL_SIZE / 2;
 
-        ctx.shadowBlur = 20;
-        ctx.shadowColor = '#FF00FF'; // Magenta Glow
+        const pulse = Math.sin(Date.now() / 150) * 2;
+        const baseSize = CELL_SIZE / 2 - 2;
 
-        const time = Date.now() / 200;
-        const pulse = Math.sin(time) * 3;
-        const size = (CELL_SIZE / 2 - 4) + pulse;
+        ctx.shadowBlur = 25;
+        ctx.shadowColor = '#FF0055';
+        ctx.fillStyle = '#FF0055';
 
-        // Inner Orb
-        ctx.fillStyle = '#FF00FF';
         ctx.beginPath();
-        ctx.arc(fx, fy, Math.max(0, size), 0, Math.PI * 2);
+        ctx.arc(fx, fy, baseSize + pulse, 0, Math.PI * 2);
         ctx.fill();
+        ctx.shadowBlur = 0;
 
         // Shockwave Ring
-        const waveSize = (Date.now() % 1000) / 1000 * CELL_SIZE * 1.5;
-        const waveAlpha = 1 - ((Date.now() % 1000) / 1000);
-        ctx.strokeStyle = `rgba(255, 0, 255, ${waveAlpha})`;
+        const waveTick = (Date.now() % 1200) / 1200; // 0 to 1
+        ctx.strokeStyle = `rgba(255, 0, 85, ${1 - waveTick})`;
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.arc(fx, fy, waveSize, 0, Math.PI * 2);
+        ctx.arc(fx, fy, baseSize + (waveTick * 20), 0, Math.PI * 2);
         ctx.stroke();
-
-        ctx.shadowBlur = 0; // Reset
     }
 
-    // D. SNAKE (Neon Gradient)
+    // 6. Snake (Cyberpunk Energy Beam)
     if (gameState.snake.length > 0) {
-        ctx.shadowBlur = 15;
+        ctx.shadowBlur = 20;
         ctx.shadowColor = 'cyan';
-
-        // Gradient for body
-        // Creating a gradient based on the snake's bounding box might be tricky for a winding snake.
-        // Instead, interpolate color per segment.
 
         gameState.snake.forEach((pos, i) => {
             const x = pos[0] * CELL_SIZE;
             const y = pos[1] * CELL_SIZE;
 
-            // Color Interpolation: Cyan (Head) -> Purple (Tail)
+            // Gradient: Cyan (#00FFFF) to Violet (#8A2BE2)
             const progress = i / gameState.snake.length;
-            // Simple interpolation logic could be optimized, but let's use HSL
-            // Head: 180 (Cyan), Tail: 260 (Purple)
-            const hue = 180 + (progress * 80);
+            // Manual RGB interpolation might be smoother, but HSL is easier
+            // Cyan=180, Violet~270
+            const hue = 180 + (progress * 90);
             ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
 
-            // Draw Rounded Rect
-            const r = CELL_SIZE / 4;
-            ctx.beginPath();
-            // Check if roundRect is supported, fallback to fillRect if not
-            if (typeof ctx.roundRect === 'function') {
-                ctx.roundRect(x + 1, y + 1, CELL_SIZE - 2, CELL_SIZE - 2, r);
-            } else {
-                ctx.fillRect(x + 1, y + 1, CELL_SIZE - 2, CELL_SIZE - 2);
-            }
+            // Draw Segment
+            // Head is white, Body is colored
+            if (i === 0) ctx.fillStyle = '#FFFFFF';
+
+            // Draw Rect with rounded corners
+            const pad = 2;
+            const size = CELL_SIZE - (pad * 2);
+            roundRect(ctx, x + pad, y + pad, size, size, 6);
             ctx.fill();
 
-            // Head Eyes
-            if (i === 0) {
-                ctx.fillStyle = '#000'; // Black eyes
-                // Basic direction check (compare with 2nd segment)
-                let dx = 0, dy = 0;
-                if (gameState.snake.length > 1) {
-                    dx = gameState.snake[0][0] - gameState.snake[1][0];
-                    dy = gameState.snake[0][1] - gameState.snake[1][1];
+            // Eyes for Head (Directional)
+            if (i === 0 && gameState.snake.length > 1) {
+                const next = gameState.snake[1];
+                const dx = pos[0] - next[0]; // 1=Right, -1=Left
+                const dy = pos[1] - next[1]; // 1=Down, -1=Up
+
+                ctx.fillStyle = '#000000'; // Black eyes
+                const eyeSize = 3;
+                // Center
+                const cx = x + CELL_SIZE / 2;
+                const cy = y + CELL_SIZE / 2;
+
+                // Position eyes based on direction
+                let ex1, ey1, ex2, ey2;
+
+                if (dx === 1) { // Right
+                    ex1 = cx + 4; ey1 = cy - 4;
+                    ex2 = cx + 4; ey2 = cy + 4;
+                } else if (dx === -1) { // Left
+                    ex1 = cx - 4; ey1 = cy - 4;
+                    ex2 = cx - 4; ey2 = cy + 4;
+                } else if (dy === 1) { // Down
+                    ex1 = cx - 4; ey1 = cy + 4;
+                    ex2 = cx + 4; ey2 = cy + 4;
+                } else { // Up (or default)
+                    ex1 = cx - 4; ey1 = cy - 4;
+                    ex2 = cx + 4; ey2 = cy - 4;
                 }
 
-                const eyeOffset = CELL_SIZE / 4;
-                const eyeSize = 3;
-
-                /* Logic for eyes placement based on dx, dy */
-                // Simplified: Just draw center pupil for now to look robotic
-                ctx.beginPath();
-                ctx.arc(x + CELL_SIZE / 2 + dx * 4, y + CELL_SIZE / 2 + dy * 4, eyeSize, 0, Math.PI * 2);
-                ctx.fill();
+                ctx.beginPath(); ctx.arc(ex1, ey1, eyeSize, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(ex2, ey2, eyeSize, 0, Math.PI * 2); ctx.fill();
             }
         });
-
         ctx.shadowBlur = 0;
     }
 
-    // F. SCANLINES (Overlay)
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
-    for (let i = 0; i < canvas.height; i += 4) {
-        ctx.fillRect(0, i, canvas.width, 1);
-    }
+    // 7. Particles
+    drawParticles(ctx);
 
-    // E. PARTICLES
-    particles.forEach((p, i) => {
-        p.update();
-        p.draw(ctx);
-        if (p.life <= 0) particles.splice(i, 1);
-    });
+    ctx.restore(); // Restore transform (Screen Shake)
+
+    // 8. Scanlines Overlay (Static on top)
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+    for (let y = 0; y < canvas.height; y += 3) {
+        ctx.fillRect(0, y, canvas.width, 1);
+    }
+}
+
+// Helper: Custom Round Rect
+function roundRect(ctx, x, y, w, h, r) {
+    if (w < 2 * r) r = w / 2;
+    if (h < 2 * r) r = h / 2;
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
 }
 
 window.addEventListener('resize', resizeCanvas);

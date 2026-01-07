@@ -416,8 +416,8 @@ async def websocket_endpoint(websocket: WebSocket):
             state = game.get_state()
             await websocket.send_json(state)
             
-            # Dynamic Speed Control
-            delay = 0.03 if state["speed_mode"] == "FAST" else 0.07
+            # Dynamic Speed Control (Slower for visibility)
+            delay = 0.06 if state["speed_mode"] == "FAST" else 0.15
             await asyncio.sleep(delay) 
             
     except Exception as e:
