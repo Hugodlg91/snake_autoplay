@@ -188,8 +188,8 @@ class SnakeGame:
                 self.force_shortcut = False
                 self.boost_timer = 0
                 
-        if self.hype_level > 0 and random.random() < 0.05:
-            self.hype_level -= 1
+        if self.hype_level > 0:
+            self.hype_level = max(0, self.hype_level - 0.5)
 
     def force_game_over(self, cause):
         self.game_over = True

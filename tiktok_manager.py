@@ -22,7 +22,7 @@ class TikTokManager:
     def setup_events(self):
         @self.client.on("like")
         async def on_like(event: LikeEvent):
-            self.game.hype_level += event.count
+            self.game.hype_level = min(100, self.game.hype_level + event.count * 0.2)
             print(f"❤️ Hype Up! Total: {self.game.hype_level}")
             
         @self.client.on("comment")
