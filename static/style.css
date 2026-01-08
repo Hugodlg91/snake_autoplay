@@ -21,7 +21,6 @@ body {
     background: radial-gradient(circle at center, #050510 0%, #000000 100%);
     color: #e0e0e0;
     font-family: 'Orbitron', sans-serif;
-    /* Futurism */
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -31,88 +30,24 @@ body {
     overflow: hidden;
 }
 
+/* UI Panel (Score area) */
+#ui-panel {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    max-width: 800px;
+    margin-top: 10px;
+    font-size: 1.2rem;
+    text-shadow: 0 0 5px cyan;
+}
+
 #game-container {
     position: relative;
-    box-shadow:
-        0 0 40px rgba(0, 255, 255, 0.1),
-        inset 0 0 50px rgba(0, 0, 0, 0.5);
-    /* Lighter Vignette */
+    box-shadow: 0 0 40px rgba(0, 255, 255, 0.1), inset 0 0 50px rgba(0, 0, 0, 0.5);
     border: 1px solid #1a1a2e;
     border-radius: 12px;
     background-color: #000;
     overflow: hidden;
-    /* For scanlines */
-}
-
-#ui-layer {
-    position: absolute;
-    top: 20px;
-    left: 20px;
-    right: 20px;
-    pointer-events: none;
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-}
-
-/* Glassmorphism Panels */
-.hud-panel {
-    background: rgba(20, 20, 35, 0.4);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    padding: 15px 25px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-header {
-    padding: 20px;
-    background: var(--glass-bg);
-    backdrop-filter: blur(10px);
-    border-bottom: 1px solid #333;
-    z-index: 10;
-}
-
-h1 {
-    text-shadow: 0 0 10px var(--accent-color);
-    margin-bottom: 15px;
-    letter-spacing: 2px;
-}
-
-.status-bar {
-    display: flex;
-    justify-content: space-between;
-}
-
-.status-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-.label {
-    font-size: 0.7rem;
-    color: #888;
-    margin-bottom: 5px;
-}
-
-.value {
-    font-size: 1.2rem;
-    font-weight: bold;
-}
-
-#ai-status {
-    color: #00ccff;
-}
-
-main {
-    flex: 1;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    position: relative;
-    padding: 20px;
 }
 
 canvas {
@@ -121,8 +56,8 @@ canvas {
     border: 1px solid #333;
     max-width: 100%;
     max-height: 100%;
-    /* Pixelated rendering for retro feel if desired, though we draw clean shapes */
     image-rendering: pixelated;
+    display: block;
 }
 
 .overlay {
@@ -133,6 +68,11 @@ canvas {
     pointer-events: none;
     opacity: 0;
     transition: opacity 0.3s;
+    text-align: center;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 30px;
+    border-radius: 15px;
+    border: 1px solid #333;
 }
 
 .overlay.visible {
@@ -144,60 +84,20 @@ canvas {
     font-size: 3rem;
     color: var(--food-color);
     text-shadow: 0 0 20px var(--food-color);
-    background: rgba(0, 0, 0, 0.8);
-    padding: 20px;
-    border-radius: 10px;
 }
 
-footer {
-    padding: 15px;
-    text-align: center;
-    background: var(--glass-bg);
-    border-top: 1px solid #333;
-}
-
-.msg {
-    color: #ff0055;
-    font-size: 0.8rem;
-    letter-spacing: 2px;
-    animation: blink 2s infinite;
-}
-
-@keyframes pulse {
-    from {
-        transform: translate(-50%, -50%) scale(1);
-    }
-
-    to {
-        transform: translate(-50%, -50%) scale(1.1);
-    }
-}
-
-@keyframes blink {
-
-    0%,
-    100% {
-        opacity: 1;
-    }
-
-    50% {
-        opacity: 0.5;
-    }
+#overlay-subtext {
+    font-size: 1.5rem;
+    color: #fff;
+    margin-top: 15px;
 }
 
 /* --- HYPE HUD --- */
 #hype-panel {
-    position: absolute;
+    position: fixed;
     right: 20px;
     top: 50%;
     transform: translateY(-50%);
-    background: rgba(20, 20, 35, 0.6);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
-    border: 1px solid rgba(0, 255, 255, 0.3);
-    box-shadow: 0 0 15px rgba(0, 255, 255, 0.1);
-    padding: 20px 10px;
-    border-radius: 12px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -205,32 +105,49 @@ footer {
     z-index: 100;
 }
 
-#hype-value {
-    font-size: 1.5rem;
-    font-weight: bold;
-    color: #fff;
-    text-shadow: 0 0 5px #fff;
-}
-
 .hype-bar-container {
-    width: 30px;
-    height: 200px;
-    background: #000;
-    border: 1px solid #333;
-    border-radius: 15px;
+    width: 20px;
+    height: 300px;
+    background: rgba(0, 0, 0, 0.8);
+    border: 2px solid #333;
+    border-radius: 10px;
     overflow: hidden;
     position: relative;
-    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.8);
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.2);
 }
 
 #hype-fill {
-    position: absolute;
-    bottom: 0;
-    left: 0;
     width: 100%;
     height: 0%;
-    /* Dynamic */
+    /* Dynamique */
     background: linear-gradient(to top, #00ff00, #ffff00, #ff0000);
-    transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+    position: absolute;
+    bottom: 0;
+    transition: height 0.3s ease-out;
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
+}
+
+#hype-value {
+    color: #fff;
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+    font-size: 1.2rem;
+    text-shadow: 0 0 5px cyan;
+}
+
+.hype-label {
+    color: cyan;
+    font-family: monospace;
+    letter-spacing: 2px;
+}
+
+/* Utils */
+@keyframes pulse {
+    from {
+        transform: translate(-50%, -50%) scale(1);
+    }
+
+    to {
+        transform: translate(-50%, -50%) scale(1.05);
+    }
 }
