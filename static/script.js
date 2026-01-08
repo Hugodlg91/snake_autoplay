@@ -12,6 +12,7 @@ let lastScore = 0;
 
 // --- FIX 1 : Déclaration des variables manquantes ---
 let shakeRemaining = 0;
+let countdownInterval = null;
 // ----------------------------------------------------
 
 // Configuration
@@ -136,18 +137,53 @@ function updateUI() {
         document.body.style.boxShadow = 'none';
     }
 
-    if (gameState.game_over) {
-        overlayTextEl.textContent = "SYSTEM FAILURE";
-        overlayTextEl.style.color = "#ff0055";
-        overlayTextEl.style.textShadow = "0 0 20px #ff0055";
-        overlayEl.classList.add("visible");
-    } else if (gameState.game_won) {
-        overlayTextEl.textContent = "SYSTEM TRANSCENDED";
-        overlayTextEl.style.color = "#ffd700";
-        overlayTextEl.style.textShadow = "0 0 30px #ffd700";
-        overlayEl.classList.add("visible");
+    if (gameState.game_over || gameState.game_won) {
+        canvas.style.filter = "blur(8px)";
+
+        let title = "";
+        let color = "";
+        let shadow = "";
+
+        if (gameState.game_won) {
+            title = "SYSTEM TRANSCENDED";
+            color = "#ffd700";
+            shadow = "0 0 30px #ffd700";
+        } else {
+            title = "SYSTEM FAILURE";
+            color = "#ff0055";
+            shadow = "0 0 20px #ff0055";
+        }
+
+        if (!countdownInterval) {
+            let count = 5;
+            overlayEl.classList.add("visible");
+
+            const updateText = () => {
+                overlayTextEl.innerHTML = `
+                    <div style="font-size: 40px; color: ${color}; text-shadow: ${shadow}">${title}</div>
+                    <div style="font-size: 20px; margin-top: 10px; color: #fff;">RESTART IN ${count}s</div>
+                `;
+            };
+
+            updateText();
+            countdownInterval = setInterval(() => {
+                count--;
+                if (count > 0) {
+                    updateText();
+                } else {
+                    clearInterval(countdownInterval);
+                }
+            }, 1000);
+        }
     } else {
+        canvas.style.filter = "none";
         overlayEl.classList.remove("visible");
+
+        // Clear countdown if game restarts
+        if (countdownInterval) {
+            clearInterval(countdownInterval);
+            countdownInterval = null;
+        }
     }
 }
 

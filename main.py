@@ -351,7 +351,9 @@ async def websocket_endpoint(websocket: WebSocket):
     try:
         while True:
             if game.game_over:
-                await asyncio.sleep(2)
+                # 1. State was sent in previous iteration.
+                # 2. Start countdown on server side (blocking this connection)
+                await asyncio.sleep(5)
                 game.reset()
             
             move = ai.get_next_move()
