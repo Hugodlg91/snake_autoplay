@@ -204,6 +204,8 @@ class SnakeGame:
         if self.hype_level > 0 and self.hype_cooldown_timer > 90:
             self.hype_level = max(0, self.hype_level - 0.5)
 
+        # Safety Hard Cap
+        self.hype_level = min(100, self.hype_level)
         self.prev_hype = self.hype_level
 
     def force_game_over(self, cause):

@@ -35,7 +35,7 @@ class TikTokManager:
         async def on_gift(event: GiftEvent):
             print(f"🎁 GIFT! {event.gift.info.name}")
             self.game.current_effect = "GOLD_RAIN"
-            self.game.hype_level += 50
+            self.game.hype_level = min(100, self.game.hype_level + 50)
 
     async def start(self):
         if self.client:

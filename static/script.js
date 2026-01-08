@@ -69,9 +69,11 @@ function connect() {
 
         // TikTok Effects
         if (newState.tiktok_effect === "GOLD_RAIN") {
-            const cx = Math.floor(newState.grid_size[0] / 2);
-            const cy = Math.floor(newState.grid_size[1] / 2);
-            spawnParticles(cx, cy, '#FFD700', 50);
+            for (let i = 0; i < 50; i++) {
+                const rx = Math.random() * newState.grid_size[0];
+                const ry = Math.random() * newState.grid_size[1];
+                spawnParticles(rx, ry, '#FFD700', 1);
+            }
         }
 
         gameState = newState;
@@ -127,7 +129,7 @@ function updateUI() {
     if (hypeFill && hypeValue) {
         const hypePct = Math.min(gameState.hype || 0, 100);
         hypeFill.style.height = `${hypePct}%`;
-        hypeValue.textContent = `${hypePct}%`;
+        hypeValue.textContent = `${Math.floor(hypePct)}%`;
 
         // Dynamic Glow
         hypeFill.style.boxShadow = `0 0 ${hypePct / 5}px rgba(255, 255, 255, 0.8)`;
