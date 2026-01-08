@@ -325,15 +325,15 @@ async def startup_event():
 
 @app.get("/")
 async def get():
-    return HTMLResponse(open("static/index.html", "r").read())
+    return HTMLResponse(open("static/index.html", "r", encoding="utf-8").read())
 
 @app.get("/index.html")
 async def get_index():
-    return HTMLResponse(open("static/index.html", "r").read())
+    return HTMLResponse(open("static/index.html", "r", encoding="utf-8").read())
 
 @app.get("/test")
 async def get_test():
-    return HTMLResponse(open("static/test.html", "r").read())
+    return HTMLResponse(open("static/test.html", "r", encoding="utf-8").read())
 
 @app.get("/debug/trigger/{event_type}")
 async def debug_trigger(event_type: str):
