@@ -3,7 +3,10 @@ const ctx = canvas.getContext('2d');
 const scoreEl = document.getElementById('score');
 const statusEl = document.getElementById('ai-status');
 const overlayEl = document.getElementById('overlay');
+const overlayEl = document.getElementById('overlay');
 const overlayTextEl = document.getElementById('overlay-text');
+const hypeValueEl = document.getElementById('hype-value');
+const hypeFillEl = document.getElementById('hype-fill');
 
 let ws;
 let gameState = null;
@@ -137,8 +140,18 @@ function updateUI() {
         document.body.style.boxShadow = 'none';
     }
 
+    // Update Hype HUD
+    if (hypeValueEl && hypeFillEl) {
+        hypeValueEl.textContent = hype;
+        const percentage = Math.min(hype, 100); // Cap at 100% for bar
+        hypeFillEl.style.height = `${percentage}%`;
+
+        // Dynamic Glow
+        hypeFillEl.style.boxShadow = `0 0 ${percentage / 5}px rgba(255, 255, 255, 0.8)`;
+    }
+
     if (gameState.game_over || gameState.game_won) {
-        canvas.style.filter = "blur(8px)";
+        canvas.style.filter = "blur(10px)";
 
         let title = "";
         let color = "";
@@ -161,7 +174,7 @@ function updateUI() {
             const updateText = () => {
                 overlayTextEl.innerHTML = `
                     <div style="font-size: 40px; color: ${color}; text-shadow: ${shadow}">${title}</div>
-                    <div style="font-size: 20px; margin-top: 10px; color: #fff;">RESTART IN ${count}s</div>
+                    <div style="font-size: 20px; margin-top: 10px; color: #fff;">REBOOT IN ${count}...</div>
                 `;
             };
 
@@ -282,10 +295,17 @@ function draw() {
             const x = pos[0] * CELL_SIZE;
             const y = pos[1] * CELL_SIZE;
 
-            // Gradient: Cyan (#00FFFF) to Violet (#8A2BE2)
-            const progress = i / gameState.snake.length;
-            const hue = 180 + (progress * 90);
-            ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
+            // Gradient or Rainbow Mode
+            if (gameState.hype > 20) {
+                // Rainbow Mode
+                const hue = (Date.now() / 5 + i * 10) % 360;
+                ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
+            } else {
+                // Standard Cyberpunk Gradient: Cyan (#00FFFF) to Violet (#8A2BE2)
+                const progress = i / gameState.snake.length;
+                const hue = 180 + (progress * 90);
+                ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
+            }
 
             // Head is white
             if (i === 0) ctx.fillStyle = '#FFFFFF';

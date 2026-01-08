@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Autonomous Snake AI</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
+
 <body>
     <div class="container">
         <header>
@@ -21,11 +23,18 @@
                 </div>
             </div>
         </header>
-        
+
         <main>
             <canvas id="gameCanvas"></canvas>
             <div class="overlay" id="overlay">
                 <h2 id="overlay-text">READY</h2>
+            </div>
+            <div id="hype-panel">
+                <div class="label">HYPE</div>
+                <div id="hype-value">0</div>
+                <div class="hype-bar-container">
+                    <div id="hype-fill"></div>
+                </div>
             </div>
         </main>
 
@@ -35,4 +44,5 @@
     </div>
     <script src="/static/script.js"></script>
 </body>
+
 </html>

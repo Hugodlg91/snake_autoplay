@@ -351,7 +351,8 @@ async def websocket_endpoint(websocket: WebSocket):
     try:
         while True:
             if game.game_over:
-                # 1. State was sent in previous iteration.
+                # 1. Send final state explicitly as requested
+                await websocket.send_json(game.get_state())
                 # 2. Start countdown on server side (blocking this connection)
                 await asyncio.sleep(5)
                 game.reset()
