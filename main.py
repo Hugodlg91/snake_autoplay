@@ -113,6 +113,10 @@ class SnakeGame:
         self.current_effect = None
         self.force_shortcut = False
         self.boost_timer = 0
+        
+        # Hype Mechanics
+        self.hype_cooldown_timer = 0
+        self.prev_hype = 0
 
     def _spawn_food(self) -> Tuple[int, int]:
         # Safety check: if grid is full, return None (Victory condition handled in step)
@@ -188,8 +192,19 @@ class SnakeGame:
                 self.force_shortcut = False
                 self.boost_timer = 0
                 
-        if self.hype_level > 0:
+        # Hype Decay Logic
+        if self.hype_level > self.prev_hype:
+            # Hype Increased -> Reset Cooldown
+            self.hype_cooldown_timer = 0
+        else:
+            # No increase -> Count up
+            self.hype_cooldown_timer += 1
+            
+        # Apply Decay only if cooldown exceeded (approx 3 seconds)
+        if self.hype_level > 0 and self.hype_cooldown_timer > 90:
             self.hype_level = max(0, self.hype_level - 0.5)
+
+        self.prev_hype = self.hype_level
 
     def force_game_over(self, cause):
         self.game_over = True
