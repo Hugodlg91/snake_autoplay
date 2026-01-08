@@ -11,10 +11,12 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
 import uvicorn
 
+from tiktok_manager import TikTokManager
+
 app = FastAPI()
 
 # Game Constants
-GRID_WIDTH = 20
+GRID_WIDTH = 30
 GRID_HEIGHT = 30
 CELL_SIZE = 20
 FPS = 30 
@@ -59,56 +61,6 @@ class GameLogger:
         
         avg = sum(self.recent_scores) / len(self.recent_scores) if self.recent_scores else 0
         print(f"💀 Game Over | Score: {score} | Avg (10): {avg:.1f} | Cause: {cause}")
-       # --- TIKTOK LIVE INTEGRATION ---
-try:
-    from TikTokLive import TikTokLiveClient
-    from TikTokLive.types.events import LikeEvent, CommentEvent, GiftEvent
-    TIKTOK_AVAILABLE = True
-except ImportError:
-    TIKTOK_AVAILABLE = False
-    print("TikTokLive library not found. Running without live integration.")
-
-class TikTokManager:
-    def __init__(self, game: SnakeGame, unique_id: str):
-        self.game = game
-        self.client = None
-        self.unique_id = unique_id
-        
-        if TIKTOK_AVAILABLE:
-            try:
-                self.client = TikTokLiveClient(unique_id=unique_id)
-                self.setup_events()
-            except Exception as e:
-                print(f"Failed to initialize TikTok Client: {e}")
-
-    def setup_events(self):
-        @self.client.on("like")
-        async def on_like(event: LikeEvent):
-            self.game.hype_level += event.count
-            print(f"❤️ Hype Up! Total: {self.game.hype_level}")
-            
-        @self.client.on("comment")
-        async def on_comment(event: CommentEvent):
-            if "boost" in event.comment.lower():
-                self.game.force_shortcut = True
-                print("🚀 CHAT BOOST ACTIVATED!")
-                # Reset boost after 5 seconds? Handled in game loop maybe?
-                # Simplified: just keep it high level flag, let game logic handle decay if needed.
-                # For now, simplistic toggle.
-                
-        @self.client.on("gift")
-        async def on_gift(event: GiftEvent):
-            print(f"🎁 GIFT! {event.gift.info.name}")
-            self.game.current_effect = "GOLD_RAIN"
-            self.game.hype_level += 50
-
-    async def start(self):
-        if self.client:
-            try:
-                # Run in a non-blocking way if possible, or just start background task
-                await self.client.start()
-            except Exception as e:
-                print(f"TikTok Connection Error: {e}")
 
 # --- HAMILTONIAN CYCLE GENERATOR ---
 class HamiltonianGenerator:
@@ -334,14 +286,6 @@ class AIController:
                 d_to_food = dist_cycle(pos_idx, food_idx)
                 
                 # Check 2.1: Is BOOST active?
-                # If Boost is active, we take ANY shortcut that is safe, even if it's not the absolute best?
-                # Or just enable a smaller margin logic (which Raycast already supersedes)?
-                # Actually Raycast logic handles safety absolutely.
-                # Boost logic: If 'd_to_food' is strictly less than 'min_dist', we normally take it.
-                # If boost is active, we might prioritize aggression.
-                # Since min_dist logic IS aggressive, we don't need to change much.
-                # BUT we can update status to show Boost.
-                
                 if d_to_food < min_dist:
                     min_dist = d_to_food
                     best_shortcut = move
