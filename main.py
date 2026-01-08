@@ -331,6 +331,10 @@ async def get():
 async def get_index():
     return HTMLResponse(open("static/index.html", "r").read())
 
+@app.get("/test")
+async def get_test():
+    return HTMLResponse(open("static/test.html", "r").read())
+
 @app.get("/debug/trigger/{event_type}")
 async def debug_trigger(event_type: str):
     if event_type == "gift":

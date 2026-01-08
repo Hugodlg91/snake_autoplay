@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake AI - DEBUG CONTROLS</title>
+    <style>
+        body {
+            background-color: #121212;
+            color: white;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            gap: 20px;
+        }
+
+        h1 {
+            color: #00ff88;
+            text-shadow: 0 0 10px #00ff88;
+        }
+
+        .btn-container {
+            display: flex;
+            gap: 20px;
+        }
+
+        button {
+            padding: 20px 40px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        .btn-like {
+            background-color: #ff0055;
+            color: white;
+            box-shadow: 0 0 15px #ff0055;
+        }
+
+        .btn-boost {
+            background-color: #00ccff;
+            color: black;
+            box-shadow: 0 0 15px #00ccff;
+        }
+
+        .btn-gift {
+            background-color: #ffd700;
+            color: black;
+            box-shadow: 0 0 15px #ffd700;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>DEBUG CONTROL PANEL</h1>
+    <div class="btn-container">
+        <button class="btn-like" onclick="trigger('like')">❤️ SIMULER LIKE</button>
+        <button class="btn-boost" onclick="trigger('boost')">🚀 SIMULER BOOST</button>
+        <button class="btn-gift" onclick="trigger('gift')">🎁 SIMULER CADEAU</button>
+    </div>
+
+    <script>
+        function trigger(event) {
+            fetch(`/debug/trigger/${event}`)
+                .then(res => res.json())
+                .then(data => console.log("Triggered:", data))
+                .catch(err => console.error("Error:", err));
+        }
+    </script>
+</body>
+
+</html>

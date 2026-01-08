@@ -216,6 +216,14 @@ function draw() {
         ctx.arc(fx, fy, baseSize + pulse, 0, Math.PI * 2);
         ctx.fill();
         ctx.shadowBlur = 0;
+
+        // Shockwave Ring (Sonar)
+        const waveTick = (Date.now() % 1200) / 1200; // 0 to 1
+        ctx.strokeStyle = `rgba(255, 0, 85, ${1 - waveTick})`;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(fx, fy, baseSize + (waveTick * 20), 0, Math.PI * 2);
+        ctx.stroke();
     }
 
     // 5. Snake (Rainbow Mode Check)
@@ -244,6 +252,36 @@ function draw() {
             // Draw Rect
             roundRect(ctx, x + 2, y + 2, CELL_SIZE - 4, CELL_SIZE - 4, 6);
             ctx.fill();
+
+            // Eyes for Head (Directional)
+            if (i === 0 && gameState.snake.length > 1) {
+                const next = gameState.snake[1];
+                const dx = pos[0] - next[0];
+                const dy = pos[1] - next[1];
+
+                ctx.fillStyle = '#000000'; // Black eyes
+                const eyeSize = 3;
+                const cx = x + CELL_SIZE / 2;
+                const cy = y + CELL_SIZE / 2;
+
+                let ex1, ey1, ex2, ey2;
+                // Calcul position yeux selon direction
+                if (dx === 1) { // Right
+                    ex1 = cx + 4; ey1 = cy - 4;
+                    ex2 = cx + 4; ey2 = cy + 4;
+                } else if (dx === -1) { // Left
+                    ex1 = cx - 4; ey1 = cy - 4;
+                    ex2 = cx - 4; ey2 = cy + 4;
+                } else if (dy === 1) { // Down
+                    ex1 = cx - 4; ey1 = cy + 4;
+                    ex2 = cx + 4; ey2 = cy + 4;
+                } else { // Up
+                    ex1 = cx - 4; ey1 = cy - 4;
+                    ex2 = cx + 4; ey2 = cy - 4;
+                }
+                ctx.beginPath(); ctx.arc(ex1, ey1, eyeSize, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(ex2, ey2, eyeSize, 0, Math.PI * 2); ctx.fill();
+            }
         });
         ctx.shadowBlur = 0;
     }
