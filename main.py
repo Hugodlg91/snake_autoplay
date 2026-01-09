@@ -330,7 +330,7 @@ class AIController:
 # Global Declaration AFTER classes
 game = SnakeGame()
 ai = AIController(game)
-tiktok = TikTokManager(game, unique_id="@vladimirwrld1")
+tiktok = TikTokManager(game, unique_id="vladimirwrld1")
 
 # serve static files
 app.mount("/static", StaticFiles(directory="static"), name="static")

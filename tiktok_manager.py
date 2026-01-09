@@ -1,6 +1,6 @@
 try:
     from TikTokLive import TikTokLiveClient
-    from TikTokLive.types.events import LikeEvent, CommentEvent, GiftEvent, ConnectEvent
+    from TikTokLive.events import LikeEvent, CommentEvent, GiftEvent, ConnectEvent
     TIKTOK_AVAILABLE = True
 except ImportError:
     TIKTOK_AVAILABLE = False
@@ -14,33 +14,37 @@ class TikTokManager:
         
         if TIKTOK_AVAILABLE:
             try:
+                print("Init TikTokClient...")
                 self.client = TikTokLiveClient(unique_id=unique_id)
+                print("TikTokClient created. Setting up events...")
                 self.setup_events()
+                print("Events setup done.")
             except Exception as e:
+                import traceback
+                traceback.print_exc()
                 print(f"Failed to initialize TikTok Client: {e}")
 
     def setup_events(self):
-        @self.client.on("connect")
+        @self.client.on(ConnectEvent)
         async def on_connect(event: ConnectEvent):
             print(f"✅ TIKTOK CONNECTED to @{self.unique_id}")
 
-        @self.client.on("like")
+        @self.client.on(LikeEvent)
         async def on_like(event: LikeEvent):
             # Log user action
             print(f"[TIKTOK] Like from {event.user.unique_id}: +{event.count}")
             
             # Update Game State
             self.game.hype_level = min(100, self.game.hype_level + event.count * 0.2)
-            # print(f"❤️ Hype Up! Total: {self.game.hype_level}")
             
-        @self.client.on("comment")
+        @self.client.on(CommentEvent)
         async def on_comment(event: CommentEvent):
             print(f"[TIKTOK] Comment from {event.user.unique_id}: {event.comment}")
             if "boost" in event.comment.lower():
                 self.game.force_shortcut = True
                 print("🚀 CHAT BOOST ACTIVATED!")
                 
-        @self.client.on("gift")
+        @self.client.on(GiftEvent)
         async def on_gift(event: GiftEvent):
             print(f"🎁 GIFT! {event.gift.info.name} from {event.user.unique_id}")
             self.game.current_effect = "GOLD_RAIN"
